@@ -367,8 +367,8 @@ export default async function handler(req, res) {
     let buffer, fileName;
 
     if (contentType.includes('multipart/form-data')) {
-      // Handle multipart/form-data (file upload)
-      const { formidable } = await import('formidable');
+      // Handle multipart/form-data (file upload) with dynamic import
+      const { default: formidable } = await import('formidable');
       const form = formidable({ 
         maxFileSize: CONFIG.MAX_FILE_SIZE,
         multiples: false 
