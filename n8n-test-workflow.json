@@ -1,0 +1,393 @@
+{
+  "name": "Text Extraction API Production Test Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileUrl",
+              "value": "={{ $vars.TEST_PDF_URL }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $vars.API_KEY }}"
+            }
+          ]
+        },
+        "method": "POST",
+        "url": "={{ $vars.API_BASE_URL }}/api/extract-text"
+      },
+      "name": "Test PDF URL Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test 1: PDF URL Extraction Results\nif ($input.statusCode === 200 && $input.body.success) {\n  return {\n    test: 'PDF_URL_EXTRACTION',\n    status: 'SUCCESS',\n    fileName: $input.body.data.fileName,\n    fileType: $input.body.data.fileType,\n    textLength: $input.body.data.metadata.textLength,\n    executionTime: $input.body.executionTime,\n    truncated: $input.body.data.truncated || false\n  };\n} else {\n  return {\n    test: 'PDF_URL_EXTRACTION',\n    status: 'FAILED',\n    error: $input.body.error || 'Unknown error',\n    statusCode: $input.statusCode\n  };\n}"
+      },
+      "name": "Process PDF URL Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileBase64",
+              "value": "={{ 'SGVsbG8gV29ybGQhIFRoaXMgaXMgYSB0ZXN0IHRleHQgZmlsZS4=' }}"
+            },
+            {
+              "name": "fileName",
+              "value": "test-file.txt"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $vars.API_KEY }}"
+            }
+          ]
+        },
+        "method": "POST",
+        "url": "={{ $vars.API_BASE_URL }}/api/extract-text"
+      },
+      "name": "Test Base64 Text Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [220, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test 2: Base64 Text Extraction Results\nif ($input.statusCode === 200 && $input.body.success) {\n  return {\n    test: 'BASE64_EXTRACTION',\n    status: 'SUCCESS',\n    fileName: $input.body.data.fileName,\n    fileType: $input.body.data.fileType,\n    textLength: $input.body.data.metadata.textLength,\n    lines: $input.body.data.metadata.lines,\n    extractedText: $input.body.data.extractedText.substring(0, 100) + '...',\n    executionTime: $input.body.executionTime\n  };\n} else {\n  return {\n    test: 'BASE64_EXTRACTION',\n    status: 'FAILED',\n    error: $input.body.error || 'Unknown error',\n    statusCode: $input.statusCode\n  };\n}"
+      },
+      "name": "Process Base64 Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileBase64",
+              "value": "={{ '89504E470D0A1A0A' }}"
+            },
+            {
+              "name": "fileName",
+              "value": "test-image.png"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "={{ $vars.API_KEY }}"
+            }
+          ]
+        },
+        "method": "POST",
+        "url": "={{ $vars.API_BASE_URL }}/api/extract-text"
+      },
+      "name": "Test Image File Rejection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [220, 700]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test 3: Image File Rejection (Should fail)\nif ($input.statusCode !== 200 || !$input.body.success) {\n  return {\n    test: 'IMAGE_REJECTION',\n    status: 'SUCCESS',\n    expectedError: 'Image files not supported',\n    actualError: $input.body.error?.message,\n    statusCode: $input.statusCode\n  };\n} else {\n  return {\n    test: 'IMAGE_REJECTION',\n    status: 'FAILED',\n    reason: 'Image file should have been rejected but was processed successfully',\n    statusCode: $input.statusCode\n  };\n}"
+      },
+      "name": "Process Image Rejection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 700]
+    },
+    {
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "method": "POST",
+        "url": "={{ $vars.API_BASE_URL }}/api/extract-text"
+      },
+      "name": "Test Authentication (No API Key)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [220, 900]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test 4: Authentication (Should fail without API key)\nif ($input.statusCode === 401) {\n  return {\n    test: 'AUTHENTICATION',\n    status: 'SUCCESS',\n    expectedResult: '401 Unauthorized',\n    actualResult: $input.statusCode + ' ' + ($input.body.error || 'Unauthorized'),\n    security: 'API key authentication working correctly'\n  };\n} else {\n  return {\n    test: 'AUTHENTICATION',\n    status: 'FAILED',\n    reason: 'Should have returned 401 without API key',\n    actualStatus: $input.statusCode\n  };\n}"
+      },
+      "name": "Process Authentication Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 900]
+    },
+    {
+      "parameters": {
+        "mode": "waitFirst"
+      },
+      "name": "Merge Test Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [700, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all test results\nconst results = $input.all();\n\nconst summary = {\n  timestamp: new Date().toISOString(),\n  apiUrl: $vars.API_BASE_URL,\n  totalTests: results.length,\n  passedTests: results.filter(r => r.json.status === 'SUCCESS').length,\n  failedTests: results.filter(r => r.json.status === 'FAILED').length,\n  testDetails: results.map(r => r.json)\n};\n\n// Generate overall status\nsummary.overallStatus = summary.failedTests === 0 ? 'PASS' : 'FAIL';\n\nreturn summary;"
+      },
+      "name": "Generate Test Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 500]
+    },
+    {
+      "parameters": {
+        "condition": "equal",
+        "value1": "={{ $json.overallStatus }}",
+        "value2": "PASS"
+      },
+      "name": "Check Overall Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1140, 500]
+    },
+    {
+      "parameters": {
+        "message": "✅ API Tests PASSED - All {{ $json.totalTests }} tests successful\\n\\nAPI Base URL: {{ $json.apiUrl }}\\nTimestamp: {{ $json.timestamp }}\\n\\nTest Details:\\n{{ $json.testDetails.map(test => `• ${test.test}: ${test.status}`).join('\\n') }}",
+        "subject": "✅ Text Extraction API - Test Results PASSED"
+      },
+      "name": "Send Success Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1360, 400]
+    },
+    {
+      "parameters": {
+        "message": "❌ API Tests FAILED - {{ $json.failedTests }} of {{ $json.totalTests }} tests failed\\n\\nAPI Base URL: {{ $json.apiUrl }}\\nTimestamp: {{ $json.timestamp }}\\n\\nFailed Tests:\\n{{ $json.testDetails.filter(test => test.status === 'FAILED').map(test => `• ${test.test}: ${test.reason || test.error}`).join('\\n') }}",
+        "subject": "❌ Text Extraction API - Test Results FAILED"
+      },
+      "name": "Send Failure Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1360, 600]
+    }
+  ],
+  "connections": {
+    "Test PDF URL Extraction": {
+      "main": [
+        [
+          {
+            "node": "Process PDF URL Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Base64 Text Extraction": {
+      "main": [
+        [
+          {
+            "node": "Process Base64 Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Image File Rejection": {
+      "main": [
+        [
+          {
+            "node": "Process Image Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Authentication (No API Key)": {
+      "main": [
+        [
+          {
+            "node": "Process Authentication Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process PDF URL Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Test Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Base64 Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Test Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Process Image Rejection": {
+      "main": [
+        [
+          {
+            "node": "Merge Test Results",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Process Authentication Test": {
+      "main": [
+        [
+          {
+            "node": "Merge Test Results",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge Test Results": {
+      "main": [
+        [
+          {
+            "node": "Generate Test Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Test Report": {
+      "main": [
+        [
+          {
+            "node": "Check Overall Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Overall Status": {
+      "main": [
+        [
+          {
+            "node": "Send Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Failure Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 3600,
+    "maxExecutionTime": 3600
+  },
+  "staticData": null,
+  "tags": [],
+  "trigger": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute",
+              "cron": {
+                "minute": 0,
+                "hour": 9
+              }
+            }
+          ]
+        },
+        "triggerOn": "schedule"
+      },
+      "id": "6b5f15a9-5a67-4da3-8c9c-1b6f9d8c7e3a",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [40, 300]
+    }
+  ],
+  "variables": [
+    {
+      "name": "API_BASE_URL",
+      "value": "https://your-vercel-domain.vercel.app",
+      "description": "Base URL of your deployed API"
+    },
+    {
+      "name": "API_KEY",
+      "value": "2dd3f5497cf6e1320cd29dd77174496d4869eda736c671f3eec3edf9ef622015",
+      "description": "n8n-specific API key"
+    },
+    {
+      "name": "TEST_PDF_URL",
+      "value": "https://example.com/sample-resume.pdf",
+      "description": "URL to test PDF file"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1",
+  "active": true,
+  "id": "api-test-workflow"
+}

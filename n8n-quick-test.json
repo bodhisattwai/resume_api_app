@@ -1,0 +1,94 @@
+{
+  "name": "Quick Text Extraction API Test",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "manual"
+      },
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileBase64",
+              "value": "={{ 'SGVsbG8gV29ybGQhIFRoaXMgaXMgYSB0ZXN0IHRleHQgZmlsZSBmb3IgdGhlIG4zbSB3b3JrZmxvdy4gSXQgaGFzIG11bHRpcGxlIGxpbmVzIGFuZCB2YXJpb3VzIGNvbnRlbnQu' }}"
+            },
+            {
+              "name": "fileName",
+              "value": "n8n-test-file.txt"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-API-Key",
+              "value": "2dd3f5497cf6e1320cd29dd77174496d4869eda736c671f3eec3edf9ef622015"
+            }
+          ]
+        },
+        "method": "POST",
+        "url": "https://your-vercel-domain.vercel.app/api/extract-text"
+      },
+      "name": "Text Extraction API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process API Response\nconst response = $input.first();\n\nif (response.json.success) {\n  return {\n    status: '✅ SUCCESS',\n    fileName: response.json.data.fileName,\n    fileType: response.json.data.fileType,\n    textLength: response.json.data.metadata.textLength,\n    lines: response.json.data.metadata.lines,\n    executionTime: response.json.executionTime,\n    extractedTextPreview: response.json.data.extractedText.substring(0, 200) + '...'\n  };\n} else {\n  return {\n    status: '❌ FAILED',\n    error: response.json.error?.message || 'Unknown error',\n    statusCode: response.statusCode,\n    hint: response.json.error?.hint\n  };\n}"
+      },
+      "name": "Process Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Extraction API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Extraction API": {
+      "main": [
+        [
+          {
+            "node": "Process Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "tags": [],
+  "trigger": [],
+  "variables": [],
+  "pinData": {},
+  "versionId": "1",
+  "active": true,
+  "id": "quick-api-test"
+}
