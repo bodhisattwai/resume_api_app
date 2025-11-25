@@ -1,0 +1,88 @@
+{
+  "name": "Text Extraction API Workflow",
+  "description": "n8n workflow configuration for the production-ready text extraction API service",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "name": "HTTP Request - Text Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://your-domain.com/api/extract-text",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "{{ $vars.API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fileUrl",
+              "value": "{{ $input.fileUrl }}"
+            }
+          ]
+        }
+      },
+      "executeOnce": false
+    },
+    {
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Handle API errors gracefully\nif ($input.success === false) {\n  return {\n    error: true,\n    message: $input.error.message,\n    type: $input.error.type,\n    hint: $input.error.hint\n  };\n}\n\n// Success response\nreturn {\n  success: true,\n  extractedText: $input.data.extractedText,\n  fileName: $input.data.fileName,\n  fileType: $input.data.fileType,\n  metadata: $input.data.metadata\n};"
+      },
+      "executeOnce": false
+    }
+  ],
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 3600,
+    "maxExecutionTime": 3600
+  },
+  "variables": [
+    {
+      "name": "API_KEY",
+      "value": "your-secure-api-key-here",
+      "description": "API Key for authentication"
+    },
+    {
+      "name": "API_BASE_URL",
+      "value": "https://your-domain.com",
+      "description": "Base URL of the text extraction API"
+    }
+  ],
+  "examples": [
+    {
+      "name": "Extract from URL",
+      "description": "Extract text from a file URL",
+      "input": {
+        "fileUrl": "https://example.com/document.pdf"
+      }
+    },
+    {
+      "name": "Extract from Base64",
+      "description": "Extract text from base64 encoded file",
+      "input": {
+        "fileBase64": "base64-encoded-content",
+        "fileName": "document.pdf"
+      }
+    }
+  ],
+  "webhook": {
+    "path": "/extract-text",
+    "methods": ["POST"],
+    "authentication": "apiKey"
+  }
+}
