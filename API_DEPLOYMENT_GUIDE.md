@@ -300,5 +300,6 @@ NODE_ENV=development
 ---
 
 **Last Updated**: November 25, 2025  
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Compatibility**: n8n 1.0+, Node.js 18+
+**Build Status**: Fixed formidable dependency issue
