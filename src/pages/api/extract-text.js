@@ -362,85 +362,59 @@ export default async function handler(req, res) {
   }
   
   try {
-    // Parse request based on content type
-    const contentType = req.headers['content-type'] || '';
+    // Parse JSON body (multipart form data removed for Vercel compatibility)
+    // n8n workflows typically use JSON with base64 or URLs
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    
+    const bodyText = Buffer.concat(chunks).toString('utf8');
+    let body;
+    
+    try {
+      body = JSON.parse(bodyText);
+    } catch (e) {
+      const result = { error: "Invalid JSON body" };
+      logRequest(req, { success: false, error: result.error }, startTime);
+      return res.status(400).json(result);
+    }
+    
     let buffer, fileName;
-
-    if (contentType.includes('multipart/form-data')) {
-      // Handle multipart/form-data (file upload) with dynamic import
-      const { default: formidable } = await import('formidable');
-      const form = formidable({ 
-        maxFileSize: CONFIG.MAX_FILE_SIZE,
-        multiples: false 
-      });
-      
-      const [fields, files] = await form.parse(req);
-      const uploadedFile = files.file?.[0] || files.resume?.[0] || files.document?.[0];
-      
-      if (!uploadedFile) {
-        const result = { error: "No file uploaded. Supported fields: 'file', 'resume', 'document'" };
-        logRequest(req, { success: false, error: result.error }, startTime);
-        return res.status(400).json(result);
-      }
-      
-      buffer = fs.readFileSync(uploadedFile.filepath);
-      fileName = uploadedFile.originalFilename;
-      
-      // Clean up temporary file
-      try { fs.unlinkSync(uploadedFile.filepath); } catch (e) { /* ignore */ }
-      
-    } else {
-      // Handle JSON body
-      const chunks = [];
-      for await (const chunk of req) {
-        chunks.push(chunk);
-      }
-      
-      const bodyText = Buffer.concat(chunks).toString('utf8');
-      let body;
-      
+    
+    // n8n-compatible input formats
+    if (body.fileUrl) {
       try {
-        body = JSON.parse(bodyText);
+        buffer = await downloadFileFromUrl(body.fileUrl);
+        fileName = path.basename(body.fileUrl);
       } catch (e) {
-        const result = { error: "Invalid JSON body" };
+        const result = { error: `URL download failed: ${e.message}` };
         logRequest(req, { success: false, error: result.error }, startTime);
         return res.status(400).json(result);
       }
-      
-      // n8n-compatible input formats
-      if (body.fileUrl) {
-        try {
-          buffer = await downloadFileFromUrl(body.fileUrl);
-          fileName = path.basename(body.fileUrl);
-        } catch (e) {
-          const result = { error: `URL download failed: ${e.message}` };
-          logRequest(req, { success: false, error: result.error }, startTime);
-          return res.status(400).json(result);
-        }
-      } else if (body.fileBase64) {
-        try {
-          buffer = Buffer.from(body.fileBase64, 'base64');
-          fileName = body.fileName || "uploaded_file";
-        } catch (e) {
-          const result = { error: "Invalid base64 encoding" };
-          logRequest(req, { success: false, error: result.error }, startTime);
-          return res.status(400).json(result);
-        }
-      } else if (body.binaryData) {
-        // n8n binary data format
-        try {
-          buffer = Buffer.from(body.binaryData.data);
-          fileName = body.fileName || "n8n_upload";
-        } catch (e) {
-          const result = { error: "Invalid binary data" };
-          logRequest(req, { success: false, error: result.error }, startTime);
-          return res.status(400).json(result);
-        }
-      } else {
-        const result = { error: "Missing file data. Provide fileUrl, fileBase64, or binaryData" };
+    } else if (body.fileBase64) {
+      try {
+        buffer = Buffer.from(body.fileBase64, 'base64');
+        fileName = body.fileName || "uploaded_file";
+      } catch (e) {
+        const result = { error: "Invalid base64 encoding" };
         logRequest(req, { success: false, error: result.error }, startTime);
         return res.status(400).json(result);
       }
+    } else if (body.binaryData) {
+      // n8n binary data format
+      try {
+        buffer = Buffer.from(body.binaryData.data);
+        fileName = body.fileName || "n8n_upload";
+      } catch (e) {
+        const result = { error: "Invalid binary data" };
+        logRequest(req, { success: false, error: result.error }, startTime);
+        return res.status(400).json(result);
+      }
+    } else {
+      const result = { error: "Missing file data. Provide fileUrl, fileBase64, or binaryData" };
+      logRequest(req, { success: false, error: result.error }, startTime);
+      return res.status(400).json(result);
     }
     
     // Process the file
